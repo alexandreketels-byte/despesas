@@ -135,6 +135,19 @@
     font-weight:500;
     font-variant-numeric:tabular-nums;
   }
+  .mes-input{
+    display:block;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    color:var(--brass);
+    background:transparent;
+    border:none;
+    border-bottom:1px solid var(--line);
+    padding:2px 0 6px;
+    margin-bottom:4px;
+    cursor:pointer;
+  }
+  .mes-input:focus{outline:none;border-color:var(--brass);}
   .split-row{
     display:flex;
     justify-content:space-between;
@@ -298,7 +311,8 @@
     <div class="ledger-card">
       <div class="ledger-total">
         <div>
-          <div class="label">Lançamentos de <span id="mesAtualLabel">—</span></div>
+          <div class="label">Mês de referência</div>
+          <input type="month" id="mesRefInput" class="mes-input">
           <div class="num" id="totalNum">R$ 0,00</div>
         </div>
         <button class="btn secondary" id="fecharMesBtn" onclick="fecharMes()">Fechar mês</button>
@@ -394,11 +408,30 @@
       if(r.ok){
         gastos = r.gastos;
         mesAtualKey = r.mesAtual;
-        document.getElementById('mesAtualLabel').textContent = mesAtualKey ? mesLabel(mesAtualKey) : '—';
+        const input = document.getElementById('mesRefInput');
+        if(mesAtualKey) input.value = mesAtualKey;
         renderGastos();
       }
     });
   }
+
+  function onMesRefChange(){
+    const novoMes = document.getElementById('mesRefInput').value;
+    if(!novoMes) return;
+    api('setMesReferencia', {mes: novoMes}).then(r=>{
+      if(r.ok){
+        mesAtualKey = r.mesAtual;
+        showToast('Mês de referência: ' + mesLabel(mesAtualKey));
+        loadHistorico();
+      } else {
+        showToast(r.error || 'Erro ao trocar o mês');
+        document.getElementById('mesRefInput').value = mesAtualKey;
+      }
+    });
+  }
+  document.addEventListener('DOMContentLoaded', ()=>{
+    document.getElementById('mesRefInput').addEventListener('change', onMesRefChange);
+  });
 
   function renderGastos(){
     const list = document.getElementById('gastosList');
