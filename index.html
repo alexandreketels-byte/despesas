@@ -234,7 +234,9 @@
     gap:12px;
     padding:10px 0;
     border-bottom:1px solid var(--line);
+    cursor:pointer;
   }
+  .hist-row:hover .mes{color:var(--brass);}
   .hist-row .mes{
     width:64px;
     font-size:13px;
@@ -286,6 +288,55 @@
     transition:opacity .25s ease;
   }
   .toast.show{opacity:1;}
+
+  .modal-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(32,41,58,.45);
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:10;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-card{
+    background:var(--paper-raised);
+    border-radius:6px;
+    padding:22px 20px;
+    width:100%;
+    max-width:400px;
+    max-height:80vh;
+    overflow-y:auto;
+  }
+  .modal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:12px;
+  }
+  .modal-header h2{
+    font-size:18px;
+    font-weight:500;
+    margin:0;
+  }
+  .detalhe-row{
+    display:flex;
+    justify-content:space-between;
+    padding:8px 0;
+    border-bottom:1px solid var(--line);
+    font-size:14px;
+  }
+  .detalhe-row .valor{font-variant-numeric:tabular-nums;}
+  .modal-total{
+    display:flex;
+    justify-content:space-between;
+    padding-top:14px;
+    margin-top:6px;
+    font-family:'Fraunces',serif;
+    font-size:18px;
+    font-weight:500;
+  }
 </style>
 </head>
 <body>
@@ -344,6 +395,20 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="detalhesOverlay" onclick="if(event.target===this) closeDetalhes()">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 id="detalhesTitulo">—</h2>
+      <button class="icon-btn" onclick="closeDetalhes()">✕</button>
+    </div>
+    <div id="detalhesLista"></div>
+    <div class="modal-total">
+      <span>Total</span>
+      <span id="detalhesTotal">R$ 0,00</span>
+    </div>
+  </div>
+</div>
 
 <script>
   const API_URL = 'https://script.google.com/macros/s/AKfycbyyxG9AfDkPuJUUq7FSV1i5bPX2tz2c0vzPCyqvZZ8Y2txy6-Aj8Pizk1aGuxNDIBg8/exec';
@@ -429,9 +494,7 @@
       }
     });
   }
-  document.addEventListener('DOMContentLoaded', ()=>{
-    document.getElementById('mesRefInput').addEventListener('change', onMesRefChange);
-  });
+  document.getElementById('mesRefInput').addEventListener('change', onMesRefChange);
 
   function renderGastos(){
     const list = document.getElementById('gastosList');
@@ -564,8 +627,34 @@
         <div class="valor">${fmt(h.total)}</div>
         ${deltaHtml}
       `;
+      row.addEventListener('click', ()=> openDetalhesMes(h.mes));
       list.appendChild(row);
     });
+  }
+
+  function openDetalhesMes(mes){
+    api('getDetalhesMes', {mes}).then(r=>{
+      if(!r.ok) return showToast(r.error || 'Erro ao buscar o mês');
+      document.getElementById('detalhesTitulo').textContent = mesLabel(mes);
+      const lista = document.getElementById('detalhesLista');
+      lista.innerHTML = '';
+      if(r.itens.length === 0){
+        lista.innerHTML = '<div class="empty-note">Sem lançamentos nesse mês.</div>';
+      } else {
+        r.itens.forEach(it=>{
+          const row = document.createElement('div');
+          row.className = 'detalhe-row';
+          row.innerHTML = `<span>${it.nome}</span><span class="valor">${fmt(it.valor)}</span>`;
+          lista.appendChild(row);
+        });
+      }
+      document.getElementById('detalhesTotal').textContent = fmt(r.total);
+      document.getElementById('detalhesOverlay').classList.add('show');
+    });
+  }
+
+  function closeDetalhes(){
+    document.getElementById('detalhesOverlay').classList.remove('show');
   }
 
   function mesLabel(mesKey){
