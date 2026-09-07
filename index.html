@@ -298,9 +298,10 @@
     <div class="ledger-card">
       <div class="ledger-total">
         <div>
-          <div class="label">Total do mês</div>
+          <div class="label">Lançamentos de <span id="mesAtualLabel">—</span></div>
           <div class="num" id="totalNum">R$ 0,00</div>
         </div>
+        <button class="btn secondary" id="fecharMesBtn" onclick="fecharMes()">Fechar mês</button>
       </div>
       <div class="split-row">
         <div class="split-item">
@@ -386,10 +387,14 @@
   }
 
   // ---------- GASTOS ----------
+  let mesAtualKey = null;
+
   function loadGastos(){
     api('getGastos').then(r=>{
       if(r.ok){
         gastos = r.gastos;
+        mesAtualKey = r.mesAtual;
+        document.getElementById('mesAtualLabel').textContent = mesAtualKey ? mesLabel(mesAtualKey) : '—';
         renderGastos();
       }
     });
@@ -469,6 +474,23 @@
       }
     });
     return false;
+  }
+
+  function fecharMes(){
+    const label = mesAtualKey ? mesLabel(mesAtualKey) : 'este mês';
+    const ok = confirm(
+      `Fechar ${label}?\n\nOs valores atuais vão pro histórico e a lista fica zerada para o próximo mês.`
+    );
+    if(!ok) return;
+    api('fecharMes').then(r=>{
+      if(r.ok){
+        showToast('Mês fechado — próximo mês pronto pra lançar');
+        loadGastos();
+        loadHistorico();
+      } else {
+        showToast(r.error || 'Erro ao fechar o mês');
+      }
+    });
   }
 
   // ---------- HISTORICO ----------
