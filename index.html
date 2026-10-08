@@ -188,6 +188,30 @@
     font-size:14px;
   }
   .gasto-row input.valor:focus{outline:none;border-color:var(--brass);}
+  .pago-check{
+    width:20px;
+    height:20px;
+    accent-color:var(--sage);
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .gasto-row{
+    transition:background .2s ease;
+    border-radius:3px;
+  }
+  .gasto-row.pago{
+    background:#DDE8DC;
+    box-shadow:-10px 0 0 #DDE8DC, 10px 0 0 #DDE8DC;
+  }
+  .gasto-row.pago .nome{
+    color:var(--sage);
+    font-weight:600;
+  }
+  .gasto-row.pago input.valor{
+    border-color:var(--sage);
+    color:var(--sage);
+    font-weight:600;
+  }
   .icon-btn{
     background:none;
     border:none;
@@ -506,8 +530,9 @@
     gastos.forEach(g=>{
       total += Number(g.valor)||0;
       const row = document.createElement('div');
-      row.className = 'gasto-row';
+      row.className = 'gasto-row' + (g.pago ? ' pago' : '');
       row.innerHTML = `
+        <input class="pago-check" type="checkbox" title="Marcar como pago" data-id="${g.id}" ${g.pago ? 'checked' : ''}>
         <div class="nome">${g.nome}</div>
         <input class="valor" type="number" step="0.01" value="${g.valor}" data-id="${g.id}">
         <button class="icon-btn save" title="Salvar" data-id="${g.id}">✓</button>
@@ -518,11 +543,32 @@
     document.getElementById('totalNum').textContent = fmt(total);
     document.getElementById('splitNum').textContent = fmt(total/2);
 
+    list.querySelectorAll('.pago-check').forEach(chk=>{
+      chk.addEventListener('change', ()=> togglePagoRow(chk));
+    });
     list.querySelectorAll('.icon-btn.save').forEach(btn=>{
       btn.addEventListener('click', ()=> saveGastoRow(btn.dataset.id));
     });
     list.querySelectorAll('.icon-btn.del').forEach(btn=>{
       btn.addEventListener('click', ()=> deleteGastoRow(btn.dataset.id));
+    });
+  }
+
+  function togglePagoRow(chk){
+    const id = chk.dataset.id;
+    const pago = chk.checked;
+    const row = chk.closest('.gasto-row');
+    const gasto = gastos.find(g=>g.id===id);
+    // atualiza a tela na hora; se o servidor falhar, desfaz
+    row.classList.toggle('pago', pago);
+    if(gasto) gasto.pago = pago;
+    api('togglePago', {id, pago}).then(r=>{
+      if(!r.ok) throw new Error(r.error);
+    }).catch(()=>{
+      chk.checked = !pago;
+      row.classList.toggle('pago', !pago);
+      if(gasto) gasto.pago = !pago;
+      showToast('Erro ao salvar o pagamento');
     });
   }
 
